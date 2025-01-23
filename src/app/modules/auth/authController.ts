@@ -30,16 +30,13 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         //sending wellcome mail
 
         const mailOption = {
-            from:process.env.SMTP_EMAIL,
-            to:email,
-            subject:"Wellcome to Aptouch Institute",
-            text:`hello welcome to our institute ${email}`
+            from: process.env.SMTP_EMAIL,
+            to: email,
+            subject: "Wellcome to Aptouch Institute",
+            text: `hello welcome to our institute ${email}`
         }
 
         transporter.sendMail(mailOption);
-
-
-
         return res.json({ success: true })
 
 
@@ -74,7 +71,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         res.cookie('token', token, {
             httpOnly: true,
             secure: config.NODE_env === 'production',
-            sameSite:config.NODE_env === 'production' ? 'none' : 'strict',
+            sameSite: config.NODE_env === 'production' ? 'none' : 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000
         })
         return res.json({ success: true })
@@ -92,7 +89,7 @@ export const logOut = async (req: Request, res: Response, next: NextFunction) =>
         res.clearCookie('token', {
             httpOnly: true,
             secure: config.NODE_env === 'production',
-            sameSite:config.NODE_env === 'production' ? 'none' : 'strict',
+            sameSite: config.NODE_env === 'production' ? 'none' : 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000
         })
         return res.json({ success: true, message: "user LogOut" })
@@ -101,6 +98,82 @@ export const logOut = async (req: Request, res: Response, next: NextFunction) =>
         next(error)
     }
 }
+
+
+
+export const sendVerifyOtp = async (req: Request, res: Response, next: NextFunction) => {
+
+    try {
+        const { userId } = req.body
+
+        const user = await userModel.findById(userId)
+        if (user?.isAccountVerified) {
+            throw new Error("Account All ready Verified")
+        }
+        const otp = String(Math.floor(100000 + Math.random() * 900000))
+
+        user.verifyOtp = otp
+        user.verifotpExpireAt = Date.now() + 24 * 60 * 60 * 1000
+
+        await user?.save();
+
+        const mailOption = {
+            from: process.env.SMTP_EMAIL,
+            to: user?.email,
+            subject: "Account verifycation OTP",
+            text: `Your OTP is ${otp}.verify your acount usign this OTP`
+        }
+        transporter.sendMail(mailOption)
+        return res.json({ success: true })
+
+    } catch (error) {
+        next(error)
+    }
+}
+
+
+export const verifyEmail = async (req: Request, res: Response, next: NextFunction) =>{
+
+const { userId , otp } = req.body
+console.log(userId , otp , "get");
+
+
+if(!userId || !otp){
+throw new Error("messing ")
+}
+
+try {
+   const user = await userModel.findById(userId)
+   console.log(user, "user mkkkkkkkkkkkkkkkky");
+   
+   if(!user){
+    throw new Error("User Not FOund")
+   }
+
+//   if (user.verifyOtp ==='' || user?.verifyOtp !== otp){
+//     throw new Error ("Otp invalid")
+//   }
+if (!user.verifyOtp || user.verifyOtp.trim() !== otp.trim()) {
+    throw new Error("Invalid OTP");
+}
+  if (user.verifotpExpireAt < Date.now()){
+    throw new Error ("Otp expaire")
+  }
+
+   user.isAccountVerified = true;
+   user.verifyOtp = '';
+   user.verifotpExpireAt = 0;
+
+   await user.save()
+   return res.json({success:true , message:"Email verified successfully"})
+
+} catch (error) {
+    next(error)
+}
+
+}
+
+
 
 
 // export const AuthController = {
