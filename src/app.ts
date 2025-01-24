@@ -6,8 +6,6 @@ import { departmentRouter } from './app/modules/department-head/dpRouter';
 import cookieParser from 'cookie-parser'
 import authRoute from './app/modules/auth/authRouter';
 
-
-
 //perser
 app.use(express.json())
 app.use(cors({credentials:true}))
